@@ -1,0 +1,1 @@
+classical:61.266;rock:11.585;pop:7.987;disco:7.414;blues:4.037;metal:2.760;jazz:1.715;hiphop:1.259;reggae:1.082;country:0.895;
