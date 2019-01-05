@@ -12,7 +12,6 @@ import librosa
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-# import pydub
 from pydub import AudioSegment
 from flask import Flask
 
@@ -340,7 +339,9 @@ weights_path = "models_trained/" + model_name + "/weights/"
 
 test_songs_list = 'list_example.txt'
 
-def main_body():
+
+# Errors here:
+def init_model():
     # Initialize model
     model = MusicTaggerCRNN(weights=None, input_tensor=(1, 96, 1366))
 
@@ -350,6 +351,11 @@ def main_body():
 
     if LOAD_WEIGHTS:
         model.load_weights(weights_path + 'crnn_net_gru_adam_ours_epoch_40.h5')
+    return model
+
+
+def main_body():
+    model = init_model()
 
     X_test, num_frames_test = extract_melgrams(test_songs_list, MULTIFRAMES, process_all_song=False, num_songs_genre='')
 
@@ -417,9 +423,7 @@ def change_to_json(sorted_result):
     return json
 
 
-
-
-
+# plot with Genres percentage classification
 # colors = ['b','g','c','r','m','k','y','#ff1122','#5511ff','#44ff22']
 # fig, ax = plt.subplots()
 # index = np.arange(tags.shape[0])
@@ -437,6 +441,8 @@ def change_to_json(sorted_result):
 # fig.autofmt_xdate()
 # plt.savefig('genres_prediction.png')
 
+
+# REST API:
 app = Flask(__name__)
 
 
