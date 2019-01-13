@@ -12,6 +12,7 @@ import librosa
 import matplotlib.pyplot as plt
 import numpy as np
 import time
+import tensorflow as ts
 from pydub import AudioSegment
 from flask import Flask
 
@@ -261,7 +262,7 @@ def MusicTaggerCRNN(weights='msd', input_tensor=None):
         return model
 
 
-#UTILS
+# UTILS
 def sort_result(tags, preds):
     result = zip(tags, preds)
     sorted_result = sorted(result, key=lambda x: x[1], reverse=True)
@@ -343,11 +344,14 @@ test_songs_list = 'list_example.txt'
 # Errors here:
 def init_model():
     # Initialize model
+    global model, graph
     model = MusicTaggerCRNN(weights=None, input_tensor=(1, 96, 1366))
 
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
                   metrics=['accuracy'])
+
+    graph = ts.get_default_graph()
 
     if LOAD_WEIGHTS:
         model.load_weights(weights_path + 'crnn_net_gru_adam_ours_epoch_40.h5')
@@ -355,8 +359,6 @@ def init_model():
 
 
 def main_body():
-    model = init_model()
-
     X_test, num_frames_test = extract_melgrams(test_songs_list, MULTIFRAMES, process_all_song=False, num_songs_genre='')
 
     num_frames_test = np.array(num_frames_test)
@@ -379,8 +381,9 @@ def main_body():
         num_frames = num_frames_test[i]
         print('Num_frames of 30s: ', str(num_frames), '\n')
 
-        results[previous_numFrames:previous_numFrames + num_frames] = model.predict(
-            X_test[previous_numFrames:previous_numFrames + num_frames, :, :, :])
+        with graph.as_default():
+            results[previous_numFrames:previous_numFrames + num_frames] = model.predict(
+                X_test[previous_numFrames:previous_numFrames + num_frames, :, :, :])
 
         s_counter = 0
         for j in range(previous_numFrames, previous_numFrames + num_frames):
@@ -423,23 +426,24 @@ def change_to_json(sorted_result):
     return json
 
 
-# plot with Genres percentage classification
-# colors = ['b','g','c','r','m','k','y','#ff1122','#5511ff','#44ff22']
-# fig, ax = plt.subplots()
-# index = np.arange(tags.shape[0])
-# opacity = 1
-# bar_width = 0.2
-# print(mean)
-# #for g in range(0, tags.shape[0]):
-# plt.bar(left=index, height=mean, width=bar_width, alpha=opacity, color=colors)
-#
-# plt.xlabel('Genres')
-# plt.ylabel('Percentage')
-# plt.title('Scores by genre')
-# plt.xticks(index + bar_width / 2, tags)
-# plt.tight_layout()
-# fig.autofmt_xdate()
-# plt.savefig('genres_prediction.png')
+def print_plot(mean):
+    # plot with Genres percentage classification
+    colors = ['b','g','c','r','m','k','y','#ff1122','#5511ff','#44ff22']
+    fig, ax = plt.subplots()
+    index = np.arange(tags.shape[0])
+    opacity = 1
+    bar_width = 0.2
+    print(mean)
+    for g in range(0, tags.shape[0]):
+        plt.bar(left=index, height=mean, width=bar_width, alpha=opacity, color=colors)
+
+    plt.xlabel('Genres')
+    plt.ylabel('Percentage')
+    plt.title('Scores by genre')
+    plt.xticks(index + bar_width / 2, tags)
+    plt.tight_layout()
+    fig.autofmt_xdate()
+    plt.savefig('genres_prediction.png')
 
 
 # REST API:
@@ -454,4 +458,7 @@ def get_places():
 
 
 if __name__ == '__main__':
+    init_model()
+    print("model has been inited")
     app.run(host='0.0.0.0', port=60022, debug=True)
+    print("app's ready")
